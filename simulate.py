@@ -314,7 +314,7 @@ def simulate_election_once(
 def simulate_election_mc(
     n_simulations: int = 10_000,
     dem_candidate: str = BIDEN,
-    poll_miss: PollMissKind = PollMissKind.SIMPLE_MISS,
+    poll_miss: PollMissKind = PollMissKind.RECENT_CYCLE_CORRELATED,
     chaos_dem_mean: float = 0,
     chaos_std_dev: float = 0.0,
     correlation_power: float = 1.0,
@@ -322,13 +322,9 @@ def simulate_election_mc(
     average_movement: float = None,
     poll_source: Literal['538', 'custom'] = 'custom',
 ) -> list[ElectionScore]:
-    election = initialize_election()
-    #for bel in election.remaining_states:
-    #    print(bel.state, bel.frac_dem_avg)
-    #exit()
+    """The starting point of monte carlo simulations of the election"""
     scores = []
     baseline = get_2020_election_struct()
-
     for _ in tqdm(range(n_simulations)):
         election = initialize_election(
             dem_candidate=dem_candidate,
@@ -389,6 +385,8 @@ def average_poll_miss(
 def estimate_fracs(
     sims: list[ElectionScore],
 ):
+    """Given a list of election results, will get a total win
+    rate and a rate for each state"""
     win_counts = {"DEM": 0, "REP": 0}
     state_win_counts = {
         state_code: {"DEM": 0, "REP": 0}
