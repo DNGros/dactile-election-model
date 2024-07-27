@@ -7,9 +7,10 @@ from daily.custom_poll_avg import fit_linear_func_national_to_state, find_weight
 from election_statics import BIDEN, HARRIS, convert_state_name_to_state_code
 from harris.harris_explore import build_harris_national_table_df, get_average_harris_delta
 from harris.typical_variances import ASSUMED_DAYS_TO_ELECTION, average_swing_all_cycle, find_max_swing_row, \
-    get_state_on_election_day_2020_poll, get_2024_poll_num, all_swing_sf, harris_cycle_moves
+    get_state_on_election_day_2020_poll, get_2024_poll_num, all_swing_df, harris_cycle_moves
 from historical_elections import get_2020_election_struct
-from hyperparams import default_movement_cur_cycle_average_multiple, harris_delta_error_default, swing_states
+from hyperparams import default_movement_cur_cycle_average_multiple, harris_delta_error_default, swing_states, \
+    default_poll_time_penalty
 from simulate import estimate_fracs, simulate_election_mc, PollMissKind, average_poll_miss
 import pandas as pd
 
@@ -30,7 +31,7 @@ def get_variance_vars():
     election_2020 = get_2020_election_struct()
     #assert max_swing_row['state'] == 'Wisconsin'
     max_state = max_swing_row_biden['state']
-    swings_df = all_swing_sf()
+    swings_df = all_swing_df()
     return {
         "days_to_election": ASSUMED_DAYS_TO_ELECTION,
         "average_movement": round(average_swing_all_cycle(HARRIS), 2),
@@ -54,6 +55,7 @@ def get_variance_vars():
             fit_linear_func_national_to_state(state)[2] ** 2
             for state in swing_states
         ]), 2)),
+        "default_poll_time_penalty": default_poll_time_penalty,
     }
 
 

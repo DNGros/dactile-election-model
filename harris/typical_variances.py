@@ -62,26 +62,34 @@ def average_swing_all_cycle(
     candidate,
     state=None,
 ):
+    """Tries to estimate the expected average move in vote share
+    for a given candidate in a given state"""
     assert candidate in (BIDEN, HARRIS)
-    swings_df = all_swing_sf()
+    swings_df = all_swing_df()  # Will just contain BIDEN's cycles
     assert state is None or len(state) > 2, "Expected state name not code"
     if state:
         swings_df = swings_df[swings_df['state'] == state]
+    # Filter out early days where not actually full days
     swings_df = swings_df[swings_df['has_full_days']]
+    # Average each cycle
     mean_swing = swings_df.groupby('cycle')['swing_abs'].mean().reset_index()
     if candidate == BIDEN:
         this_estimate = mean_swing['swing_abs'].mean()
     else:
+        # Estimate from the Harris 2024 data
         harris_estimate = harris_cycle_moves(state)
+        # Combine biden and harris, more weight on Harris
         this_estimate = (mean_swing['swing_abs'].mean() * 2 + harris_estimate) / 3
     if state is not None:
+        # We don't want to overfit to a state. Combine it also with the national estimate
         average_swing_national = average_swing_all_cycle(candidate, state=None)
         this_estimate = (this_estimate + average_swing_national) / 2
     return this_estimate
 
 
 @functools.cache
-def all_swing_sf():
+def all_swing_df():
+    """A dataframe with the amount of days-to-election moves"""
     df = get_margins_df_custom_avg(True)
     df = df[df['candidate'] == BIDEN]
     swings_df = calc_swing_df(df).reset_index()
@@ -91,7 +99,7 @@ def all_swing_sf():
 
 @functools.cache
 def find_max_swing_row(state: str = None, cycle = None) -> dict | None:
-    swings_df = all_swing_sf()
+    swings_df = all_swing_df()
     if state:
         swings_df = swings_df[swings_df['state'] == state]
     if cycle:

@@ -22,6 +22,7 @@ def harris_only_table_html(
     state: str = None,
     include_national: bool = True,
 ):
+    """Creates a table for displaying avaialble Harris polls."""
     df = build_polls_clean_df(mode=HARRIS, state=state)
     #with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
     #    print(df)

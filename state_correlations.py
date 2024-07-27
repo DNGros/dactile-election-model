@@ -215,6 +215,8 @@ def get_multivariate_t_dist(
     degrees_freedom: float,
     states: list[str] = None
 ):
+    """Gets a multivariate t-distribution for state changes from extracted
+    correlations"""
     if source == '538':
         correlation_dict = load_five_thirty_eight_correlation()
     elif source == 'eco':
@@ -249,6 +251,7 @@ def get_random_multivariate_normal_dist(std_dev=1.0, states=None):
 
 
 def get_random_multivariate_t_dist(degrees_freedom, states=None):
+    """Selects a correlated t-dist from one of our available sources"""
     if random.choice([True, False]):
         return get_multivariate_t_dist('538', degrees_freedom, states)
     else:

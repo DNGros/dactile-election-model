@@ -19,9 +19,7 @@ plot_base = cur_path / 'dailyarticlegen/imgs/plots'
 
 
 def make_all_daily_plots():
-    n_simulations = 5000
     overall_frac, state_frac = estimate_fracs(simulate_election_mc(
-        n_simulations=n_simulations,
         dem_candidate=HARRIS,
         poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
     ))
@@ -33,7 +31,6 @@ def make_all_daily_plots():
     )
 
     overall_frac, state_frac = estimate_fracs(simulate_election_mc(
-        n_simulations=n_simulations,
         dem_candidate=HARRIS,
         poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
         average_movement=0,
