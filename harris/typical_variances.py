@@ -278,13 +278,18 @@ def make_state_movements_plot(
                 ]
                 if state_cycle_data.empty:
                     continue
+                if candidate == BIDEN:
+                    color = sns.color_palette()[0] if cycle == 2024 else sns.color_palette()[1]
+                elif candidate == HARRIS:
+                    color = sns.color_palette()[6]
                 sns.lineplot(
                     data=state_cycle_data,
                     x='day_of_year',
                     y='percent_of_d_r_share',
                     ax=ax,
                     linewidth=3,
-                    color='blue' if candidate == BIDEN else 'purple',
+                    color=color,
+                    #linestyle='-' if cycle == 2024 else '--',
                 )
 
             if cycle == 2024:
@@ -455,9 +460,8 @@ if __name__ == "__main__":
     print(v)
     print("average", np.mean(list(v.values())))
     print("harris national average", average_swing_all_cycle(HARRIS))
-    exit()
     #print(get_margins_df_custom_avg())
     print(harris_cycle_moves())
     print("average swing all cycles", average_swing_all_cycle(HARRIS))
     #print(get_state_on_election_day_2020_poll("Wisconsin"))
-    #make_state_movements_plot()
+    make_state_movements_plot(get_margins_df_custom_avg(True))

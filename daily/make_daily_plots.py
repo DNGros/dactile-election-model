@@ -1,4 +1,5 @@
 from pathlib import Path
+import math
 import pandas as pd
 import numpy as np
 
@@ -126,7 +127,13 @@ def make_available_polls_plot(save_path=None):
         ax.text(0.1, 0.9, state, horizontalalignment='left',
                 verticalalignment='center', transform=ax.transAxes,
                 fontsize=14, fontweight='bold')
-        ax.set_ylim(0, df['total_weight_sum'].max() * 1.1)
+
+        # Calculate the maximum value
+        max_value = df['total_weight_sum'].max() * 1.1
+        # Round up to the nearest 5
+        rounded_value = math.ceil(max_value / 5) * 5
+        # Set the y-axis limit
+        ax.set_ylim(0, rounded_value)
 
         # Set up the bar plot for key values
         key_values = {
