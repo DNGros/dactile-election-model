@@ -166,8 +166,60 @@ def belief_to_result(
     average_movement: float = None,
     correlated_chaos_avg_change: float = 0,
 ) -> StateResult:
-    # Sample errors from the t-distribution
-    if poll_miss in (PollMissKind.SIMPLE_MISS, PollMissKind.ADJUSTED):
+    """Gets a new result given the sampled changes"""
+    if poll_miss in (
+        PollMissKind.RECENT_CYCLE,
+        PollMissKind.RECENT_CYCLE_CORRELATED,
+        PollMissKind.POLL_MISS_TODAY_CORRELATED
+    ):
+        frac_dem = belief.frac_dem_avg
+        frac_rep = belief.frac_rep_avg
+        frac_other = 0  # Essentially assume this splits equally
+        total = frac_dem + frac_rep
+        frac_dem /= total
+        frac_rep /= total
+        dem_margin = frac_dem - frac_rep
+        avg_margin_miss = 0.038  # From the 538 num https://abcnews.go.com/538/538s-2024-presidential-election-forecast-works/story?id=110867585
+        if belief.weighted_poll_count is not None:
+            # Adjust for how much polling we have. Less polling increases miss.
+            avg_margin_miss = estimate_margin_error(
+                cur_weight_sum=belief.weighted_poll_count,
+                target_full_error=avg_margin_miss,
+            )
+        #print("average margin miss", avg_margin_miss)
+
+        # Estimate expected movement scaling
+        df = 5
+        if average_movement is not None:
+            pass
+        elif poll_miss in (PollMissKind.RECENT_CYCLE, PollMissKind.RECENT_CYCLE_CORRELATED):
+            average_movement = (
+                average_swing_all_cycle() / 100
+                * default_movement_cur_cycle_average_multiple
+            )
+        else:
+            average_movement = 0
+        #print("average movement", average_movement)
+
+        if poll_miss == PollMissKind.RECENT_CYCLE:
+            raise NotImplementedError
+        else:
+            margin_swing = (
+                correlated_t_samples[0] * calc_scale_factor_for_t_dist(
+                    df, avg_margin_miss
+                )
+            )
+            dem_margin += margin_swing
+            dem_margin = float(np.clip(dem_margin, -1, 1))
+            frac_dem = (1 + dem_margin) / 2
+            frac_dem += correlated_t_samples[1] * calc_scale_factor_for_t_dist(df, average_movement)
+            frac_dem += correlated_t_samples[2] * calc_scale_factor_for_t_dist(df, correlated_chaos_avg_change)
+            frac_dem += belief.dem_bump_from_new_candidate
+            frac_dem = float(np.clip(frac_dem, 0, 1))
+        frac_rep = 1 - frac_dem
+        if belief.dem_chaos_factor != 0:
+            raise NotImplementedError
+    elif poll_miss in (PollMissKind.SIMPLE_MISS, PollMissKind.ADJUSTED):
         # DEPRECATED
         if correlated_chaos_avg_change != 0:
             raise NotImplementedError
@@ -196,84 +248,12 @@ def belief_to_result(
         total = frac_dem + frac_rep
         frac_dem /= total
         frac_rep /= total
-    elif poll_miss in (
-        PollMissKind.RECENT_CYCLE,
-        PollMissKind.RECENT_CYCLE_CORRELATED,
-        PollMissKind.POLL_MISS_TODAY_CORRELATED
-    ):
-        # use estimates from trump-biden cycles
-        frac_dem = belief.frac_dem_avg
-        frac_rep = belief.frac_rep_avg
-        frac_other = 0
-        total = frac_dem + frac_rep
-        frac_dem /= total
-        frac_rep /= total
-        dem_margin = frac_dem - frac_rep
-        avg_margin_miss = 0.038  # From the 538 num https://abcnews.go.com/538/538s-2024-presidential-election-forecast-works/story?id=110867585
-        # Adjust for how much polling we have
-        if belief.weighted_poll_count is not None:
-            avg_margin_miss = estimate_margin_error(
-                cur_weight_sum=belief.weighted_poll_count,
-                target_full_error=avg_margin_miss,
-            )
-        #print("average margin miss", avg_margin_miss)
-        df = 5
-        if average_movement is not None:
-            pass
-        elif poll_miss in (PollMissKind.RECENT_CYCLE, PollMissKind.RECENT_CYCLE_CORRELATED):
-            average_movement = (
-                average_swing_all_cycle() / 100
-                * default_movement_cur_cycle_average_multiple
-            )
-        else:
-            average_movement = 0
-        #print("average movement", average_movement)
-        if poll_miss == PollMissKind.RECENT_CYCLE:
-            raise NotImplementedError
-            #miss_dist = stats.t(df=df)
-            # movement_dist = stats.t(df=df)
-            #if correlated_chaos_avg_change:
-            #    raise NotImplementedError
-            #abs_diff_to_std = np.sqrt(2 / np.pi)  # https://math.stackexchange.com/questions/555831/the-expectation-of-absolute-value-of-random-variables
-            #miss_sample = miss_dist.rvs()
-            #movement_sample = movement_dist.rvs()
-            #margin_swing = (
-            #        miss_sample * (avg_margin_miss / abs_diff_to_std ) / np.sqrt(df / (df - 2))
-            #        + movement_sample * (average_movement / abs_diff_to_std) / np.sqrt(df / (df - 2))
-            #)
-            #dem_margin += margin_swing + belief.dem_bump_from_new_candidate
-        else:
-            margin_swing = (
-                correlated_t_samples[0] * calc_scale_factor_for_t_dist(
-                    df, avg_margin_miss
-                )
-            )
-            #print("Sampled margin swing:", margin_swing, "old margin", dem_margin)
-            #_all_margin_swings.append(margin_swing)
-            dem_margin += margin_swing
-            #print("New margin", dem_margin)
-            dem_margin = float(np.clip(dem_margin, -1, 1))
-            frac_dem = (1 + dem_margin) / 2
-            #print("average movement", average_movement, frac_dem)
-            frac_dem += correlated_t_samples[1] * calc_scale_factor_for_t_dist(df, average_movement)
-            #print("correlated chaos avg change", correlated_chaos_avg_change, frac_dem)
-            frac_dem += correlated_t_samples[2] * calc_scale_factor_for_t_dist(df, correlated_chaos_avg_change)
-            #print("dem bump from new candidate", belief.dem_bump_from_new_candidate, frac_dem)
-            frac_dem += belief.dem_bump_from_new_candidate
-            #print("final frac_dem bump", frac_dem)
-            frac_dem = float(np.clip(frac_dem, 0, 1))
-        frac_rep = 1 - frac_dem
-        if belief.dem_chaos_factor != 0:
-            raise NotImplementedError
     else:
         raise ValueError
-
-
 
     # Try just make the swing states random
     #frac_dem = 1 if random.random() > 0.5 else 0
     #frac_rep = 1 - frac_dem
-
 
     # Determine the winner
     winner = "DEM" if frac_dem > frac_rep else "REP"

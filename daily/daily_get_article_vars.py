@@ -77,6 +77,10 @@ def get_polls_vars():
 
 
 def get_main_fracs():
+    top_frac, top_line_state_fracs = estimate_fracs(simulate_election_mc(
+        dem_candidate=HARRIS,
+        poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
+    ))
     return {
         "biden_movement_prob": round(estimate_fracs(simulate_election_mc(
             dem_candidate=BIDEN,
@@ -90,6 +94,8 @@ def get_main_fracs():
         "measured_sim_poll_miss": round(average_poll_miss(
             PollMissKind.RECENT_CYCLE_CORRELATED,
         ) * 100, 1),
+        "top_line_prob": round(top_frac * 100, 1),
+        "state_fracs": top_line_state_fracs,
     }
 
 

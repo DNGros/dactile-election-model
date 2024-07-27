@@ -168,19 +168,31 @@ def get_margins_df_custom_avg(
     only_swing_states: bool = True,
 ):
     """Same as get_margins but using our custom avg"""
-    assert only_swing_states
-    avgs = [
-        *[
-            get_custom_polling_average(
-                candidate=candidate,
-                cycle=cycle,
-                state=state,
-                include_national=True,
-            )
-            for state in swing_states
-            for cycle, candidate in ((2020, BIDEN), (2024, BIDEN), (2024, HARRIS))
+    if only_swing_states:
+        avgs = [
+            *[
+                get_custom_polling_average(
+                    candidate=candidate,
+                    cycle=cycle,
+                    state=state,
+                    include_national=True,
+                )
+                for state in swing_states
+                for cycle, candidate in ((2020, BIDEN), (2024, BIDEN), (2024, HARRIS))
+            ]
         ]
-    ]
+    else:
+        avgs = [
+            *[
+                get_custom_polling_average(
+                    candidate=candidate,
+                    cycle=cycle,
+                    state=None,
+                    include_national=True,
+                )
+                for cycle, candidate in ((2020, BIDEN), (2024, BIDEN), (2024, HARRIS))
+            ]
+        ]
     df = pd.concat(avgs)
     df['day_of_year'] = df['date'].dt.dayofyear
     # Filter to March 1 since that's when the 2024 data starts
@@ -188,7 +200,10 @@ def get_margins_df_custom_avg(
     # Get the total pct for each (date, state)
     df['percent_of_d_r_share'] = df['average']
     df['d_r_share_margin'] = df['percent_of_d_r_share'] - 50
-    df['state_code'] = df['state'].apply(convert_state_name_to_state_code)
+    if only_swing_states:
+        df['state_code'] = df['state'].apply(convert_state_name_to_state_code)
+    else:
+        df['state_code'] = None
     # Dropout times
     df = df[(df['candidate'] != BIDEN) | (df['date'] < dropout_day)]
     df = df[(df['candidate'] != HARRIS) | (df['date'] >= harris_start_display_date)]
@@ -395,14 +410,11 @@ def harris_cycle_moves(state=None) -> float:
     today = pd.Timestamp.now()
     days_to_election = election_day[2024] - today.day_of_year
     days_since_dropout = today.day_of_year - dropout_day.day_of_year
-    day_lag = int(days_since_dropout / 4)
     dropout_to_election = election_day[2024] - dropout_day.day_of_year
-    can_direct_estimate = days_to_election + 1 < days_since_dropout
+    # Get moves on a subset of the days we will use for random walks
+    day_lag = int(days_since_dropout / 4)
     swing_df = calc_swing_df(df, day_lag)
     swing_df = swing_df[swing_df['has_full_days']]
-    #with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
-    #    print(swing_df)
-    print("Average move", swing_df['swing_abs'].mean())
     # Get a numpy of swings
     swings = np.array(swing_df['swing'].values)
     # Sample bootstrapped random walks. We sample day spans from our
@@ -418,12 +430,13 @@ def harris_cycle_moves(state=None) -> float:
         swings, (num_samples, actual_steps_sampled),
         replace=True,
     )
-    #print(samples)
     # Calculate the average of each sample
     sample_sums = np.sum(samples * trend_following_steps, axis=1)
     # Calculate the average of the sample means
     bootstrap_walks = np.mean(np.abs(sample_sums))
     print("Bootstrap walks mean", bootstrap_walks)
+    # If we have enough days we can directly average the move
+    can_direct_estimate = days_to_election + 1 < days_since_dropout
     if can_direct_estimate:
         direct_swing_df = calc_swing_df(df, days_to_election)
         direct = direct_swing_df['swing_abs'].mean()

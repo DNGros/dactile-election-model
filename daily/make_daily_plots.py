@@ -1,9 +1,11 @@
 from pathlib import Path
+import pandas as pd
 import numpy as np
 
 from matplotlib.ticker import FuncFormatter
 
-from daily.custom_poll_avg import get_custom_polling_average
+from daily.custom_poll_avg import get_custom_polling_average, find_biden_dropout_day, find_weight_sum_for_day, \
+    find_election_day_2020_weight_sum
 from election_statics import HARRIS, BIDEN
 from harris.typical_variances import make_state_movements_plot, get_margins_df_custom_avg, election_day
 from simulate import estimate_fracs, simulate_election_mc, PollMissKind
@@ -48,27 +50,23 @@ def make_all_daily_plots():
     p = make_available_polls_plot(plot_base / "available_polls.svg")
 
 
-def make_available_polls_plot(
-    save_path=None,
-):
-    state = "National"
-    cycle = 2024
-    candidate = HARRIS
+def make_available_polls_plot(save_path=None):
     df = get_margins_df_custom_avg(True)
-    # Get unique states and cycles
-    states = df['state'].unique()
+    #eational_avg = get_margins_df_custom_avg(False)
+    #df = pd.concat([national_avg, df])
+    states = list(df['state'].unique())
     cycles = df['cycle'].unique()
 
-    # Set up the plot
     num_states = len(states)
-    fig, axes = plt.subplots(num_states, 2, figsize=(8, 2.5 * num_states), squeeze=False)
+    fig, axes = plt.subplots(
+        num_states, 2, figsize=(7, 2.25 * num_states), squeeze=False,
+        gridspec_kw={'width_ratios': [3, 1]}
+    )
     fig.suptitle(
         'How Many Top-Quality Recent Polls\nDo We Have?',
         fontsize=17,
         fontweight='bold',
-        # Put in the top left corner
         x=0.07,
-        #y=0.98,
         y=0.967,
         horizontalalignment='left',
     )
@@ -90,10 +88,10 @@ def make_available_polls_plot(
 
     df = df[df['day_of_year'] >= month_starts[0]]
     legend_handles = []
+
     for idx, state in enumerate(states):
         ax = axes[idx, 0]
-        sqrt_ax = axes[idx, 1]
-        #ax2 = ax.twinx()  # Create a twin axis for sqrt values
+        bar_ax = axes[idx, 1]
 
         state_data = df[df['state'] == state]
 
@@ -102,12 +100,8 @@ def make_available_polls_plot(
             for candidate in cycle_data['candidate'].unique():
                 candidate_data = cycle_data[cycle_data['candidate'] == candidate]
 
-                #color = 'blue' if candidate == BIDEN else 'purple'
                 if candidate == BIDEN:
-                    if cycle == 2024:
-                        color = sns.color_palette()[0]
-                    else:
-                        color = sns.color_palette()[1]
+                    color = sns.color_palette()[0] if cycle == 2024 else sns.color_palette()[1]
                 elif candidate == HARRIS:
                     color = sns.color_palette()[6]
                 linestyle = '-' if cycle == 2024 else '--'
@@ -122,39 +116,49 @@ def make_available_polls_plot(
                 )
                 if idx == 0:
                     legend_handles.append(line)
-                sqrt_ax.plot(
-                    candidate_data['day_of_year'],
-                    np.sqrt(candidate_data['total_weight_sum']),
-                    color=color,
-                    linestyle=linestyle,
-                    label=label
-                )
 
-        # Set up the axes
-        #ax.set_xlim(0, 366)
-        #ax.xaxis.set_major_formatter(FuncFormatter(format_fn))
-        #ax.set_xticks(month_starts)
-        #ax.set_xlabel('Month')
+        # Set up the line plot
         ax.set_xticks(month_starts)
         ax.set_xticklabels(months)
         ax.set_ylabel('Weighted Count')
-        sqrt_ax.set_ylabel('Sqrt of Weighted Count')
         if idx == 0:
             ax.set_title('Available Counts')
-            sqrt_ax.set_title('~Amount of Information')
-        #ax.set_title(f"{state}")
-        # Make the title inside the plot
         ax.text(0.1, 0.9, state, horizontalalignment='left',
                 verticalalignment='center', transform=ax.transAxes,
                 fontsize=14, fontweight='bold')
         ax.set_ylim(0, df['total_weight_sum'].max() * 1.1)
-        sqrt_ax.set_ylim(0, np.sqrt(df['total_weight_sum'].max() * 1.1))
 
-        # Set up the sqrt axis
-        #y_min, y_max = ax.get_ylim()
-        #ax2.set_ylim(np.sqrt(y_min), np.sqrt(y_max))
-        #ax2.set_ylabel('Sqrt of Total Weight Sum')
+        # Set up the bar plot for key values
+        key_values = {
+            'Biden\nDropout': find_biden_dropout_day(state),
+            'Harris\nNow': find_weight_sum_for_day(
+                date=pd.Timestamp.now(),
+                state=state,
+                candidate=HARRIS,
+            ),
+            '2020\nElection\nDay': find_election_day_2020_weight_sum(state)
+        }
 
+        bar_colors = [sns.color_palette()[0], sns.color_palette()[6], sns.color_palette()[1]]  # You can adjust these colors
+        bars = bar_ax.bar(key_values.keys(), np.sqrt(list(key_values.values())), color=bar_colors)
+        bar_ax.set_ylabel('Sqrt Weighted Count')
+        if idx == 0:
+            bar_ax.set_title('Est. Available\nInformation')
+        bar_ax.set_ylim(0, np.sqrt(df['total_weight_sum'].max() * 1.1) * 1.1)
+
+        # Rotate x-axis labels for better readability
+        bar_ax.set_xticklabels(
+            key_values.keys(),
+            # smaller font
+            fontsize=7,
+        )
+
+        # Add value labels on top of each bar
+        #for bar in bars:
+        #    height = bar.get_height()
+        #    bar_ax.text(bar.get_x() + bar.get_width() / 2., height,
+        #                f'{height:.2f}',
+        #                ha='center', va='bottom')
 
     # Add the legend
     fig.legend(
@@ -164,9 +168,7 @@ def make_available_polls_plot(
         title='Legend'
     )
 
-    plt.tight_layout(
-        rect=[0, 0, 1, 0.975]
-    )
+    plt.tight_layout(rect=[0, 0, 1, 0.975])
     if save_path is not None:
         plt.savefig(save_path, bbox_inches='tight', transparent=True)
     else:
