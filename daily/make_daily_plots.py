@@ -26,10 +26,11 @@ def make_all_daily_plots():
         dem_candidate=HARRIS,
         poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
     ))
+    today = pd.Timestamp.now()
     plot_election_map(
         overall_frac, state_frac,
         save_path=str(map_base / 'harris_assumed.html'),
-        title=f"Harris Combined Estimate",
+        title=f"Harris Combined Estimate ({(today.strftime('%b %d'))})",
         candidate_name="Harris",
     )
 
@@ -41,7 +42,7 @@ def make_all_daily_plots():
     plot_election_map(
         overall_frac, state_frac,
         save_path=str(map_base / 'harris_today.html'),
-        title=f"If the Election was Today",
+        title=f"If the Election was Today ({(today.strftime('%b %d'))})",
         candidate_name="Harris",
     )
 
