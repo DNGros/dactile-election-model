@@ -1,0 +1,6 @@
+- 7/28: Fix where the averages rendered in the article for Biden 2020/2024 did
+        not filter for "full_days".
+        The "full_days" filters out early days in the election where not the full span of days.
+        This now better matches the actual values used in the model.
+        While these displayed average numbers change ~0.1 point, the
+        topline estimates should be unchanged (as that was always filtering)
