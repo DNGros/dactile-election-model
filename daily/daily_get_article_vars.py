@@ -10,7 +10,7 @@ from harris.typical_variances import ASSUMED_DAYS_TO_ELECTION, average_swing_all
     get_state_on_election_day_2020_poll, get_2024_poll_num, all_swing_df, harris_cycle_moves
 from historical_elections import get_2020_election_struct
 from hyperparams import default_movement_cur_cycle_average_multiple, harris_delta_error_default, swing_states, \
-    default_poll_time_penalty
+    default_poll_time_penalty, dropout_day
 from simulate import estimate_fracs, simulate_election_mc, PollMissKind, average_poll_miss
 import pandas as pd
 
@@ -35,8 +35,8 @@ def get_variance_vars():
     return {
         "days_to_election": ASSUMED_DAYS_TO_ELECTION,
         "average_movement": round(average_swing_all_cycle(HARRIS), 2),
-        "average_movement_biden_2020": f"{swings_df[swings_df['cycle'] == 2020]['swing_abs'].mean():.2f}",
-        "average_movement_biden_2024": round(swings_df[(swings_df['cycle'] == 2024) & (swings_df['candidate'] == BIDEN)]['swing_abs'].mean(), 2),
+        "average_movement_biden_2020": f"{swings_df[(swings_df['cycle'] == 2020) & swings_df['has_full_days']]['swing_abs'].mean():.2f}",
+        "average_movement_biden_2024": round(swings_df[(swings_df['cycle'] == 2024) & (swings_df['candidate'] == BIDEN) & swings_df['has_full_days']]['swing_abs'].mean(), 2),
         "average_movement_harris_2024": round(harris_cycle_moves(), 2),
         "state_of_max_swing": max_state,
         "max_swing_abs": round(max_swing_row_biden['swing_abs'], 2),
@@ -56,6 +56,8 @@ def get_variance_vars():
             for state in swing_states
         ]), 2)),
         "default_poll_time_penalty": default_poll_time_penalty,
+        "dropout_day": dropout_day.strftime("%B %d"),
+        "dropout_day_to_election": (pd.to_datetime("2024-11-05") - dropout_day).days,
     }
 
 
@@ -90,6 +92,11 @@ def get_main_fracs():
             dem_candidate=HARRIS,
             poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
             average_movement=0,
+        ))[0] * 100),
+        "biden_dropout_day_prob": round(estimate_fracs(simulate_election_mc(
+            dem_candidate=BIDEN,
+            poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
+            reference_today_date=dropout_day,
         ))[0] * 100),
         "measured_sim_poll_miss": round(average_poll_miss(
             PollMissKind.RECENT_CYCLE_CORRELATED,

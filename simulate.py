@@ -19,7 +19,7 @@ from harris.typical_variances import average_swing_all_cycle
 from historical_elections import get_2020_election_struct
 from hyperparams import default_poll_miss, poll_miss_div, poll_miss_for_other_mis_div, whitmer_mi_bump, \
     default_chaos_factor, adjusted_poll_miss, harris_national_change, \
-    default_movement_cur_cycle_average_multiple, harris_article_calc_date
+    default_movement_cur_cycle_average_multiple, harris_article_calc_date, dropout_day
 from state_correlations import apply_correlation, load_random_correlations, load_random_covariances, \
     get_random_multivariate_t_dist, load_538_covariances, corr2cov, load_five_thirty_eight_correlation, \
     calc_scale_factor_for_t_dist
@@ -28,13 +28,10 @@ from pathlib import Path
 
 cur_path = (Path(__file__).parent).absolute()
 
-cache = Memory(str(cur_path / "simcache"), verbose=1)
+cache_dir = str(cur_path / "simcache")
+cache = Memory(cache_dir, verbose=1)
 #cache = Memory(None, verbose=1)
 
-
-#NOTE!
-# https://math.stackexchange.com/questions/555831/the-expectation-of-absolute-value-of-random-variables
-# Standard dev of absolute values is sqrt(2/pi) * std dev
 
 class PollMissKind(StrEnum):
     SIMPLE_MISS = "simple_miss"
@@ -88,6 +85,10 @@ def get_dem_bump_for_candidate(
         return 0
     else:
         raise ValueError
+
+#NOTE to self.
+# https://math.stackexchange.com/questions/555831/the-expectation-of-absolute-value-of-random-variables
+# Standard dev of absolute values is sqrt(2/pi) * std dev
 
 
 def initialize_election(
@@ -154,7 +155,6 @@ def initialize_election(
             )
             state_beliefs.append(belief)
 
-    #print("INIT ELECTION")
     return Election({}, state_beliefs, dem_candidate=dem_candidate)
 
 
@@ -321,6 +321,7 @@ def simulate_election_mc(
     correlated_chaos_avg_change: float = 0,
     average_movement: float = None,
     poll_source: Literal['538', 'custom'] = 'custom',
+    reference_today_date: pd.Timestamp = pd.Timestamp.now().normalize(),
 ) -> list[ElectionScore]:
     """The starting point of monte carlo simulations of the election"""
     scores = []
@@ -332,9 +333,11 @@ def simulate_election_mc(
             chaos_std_dev=chaos_std_dev,
             correlation_power=correlation_power,
             polls_source=poll_source,
+            date=reference_today_date.strftime("%Y-%m-%d"),
         )
         new_election = simulate_election_once(
-            election, poll_miss=poll_miss,
+            election,
+            poll_miss=poll_miss,
             average_movement=average_movement,
             correlated_chaos_avg_change=correlated_chaos_avg_change,
         )
@@ -407,25 +410,11 @@ def estimate_fracs(
 
 
 if __name__ == "__main__":
-    #mean, var, _, _, = stats.t.stats(df=5, scale=0.03, moments='mvsk')
-    #print("std dev:", math.sqrt(var))
-    #print("Expected std", 0.03 * math.sqrt(5/(5-2)))
-    #print(default_poll_miss.std())
-    #print(math.sqrt(default_poll_miss.var() * 2) / 2)
-    #exit()
-    #print(election)
-    #print(ElectionScore.from_election(election, baseline_election=get_2020_election_struct()))
-    # Find the average poll miss
-    average_poll_miss(poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED)
-    exit()
-    #average_poll_miss(poll_miss=PollMissKind.RECENT_CYCLE)
-    #exit()
-    overall, states = estimate_fracs(simulate_election_bootstrap(
-        #n_simulations=1000,
-        n_simulations=5000,
+    overall, states = estimate_fracs(simulate_election_mc(
+        #dem_candidate=BIDEN,
         dem_candidate=HARRIS,
         poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
-        average_movement=0,
+        #reference_today_date=dropout_day,
     ))
     print(overall)
     for state_code, frac in states.items():

@@ -61,6 +61,7 @@ def calc_swing_df(
 def average_swing_all_cycle(
     candidate,
     state=None,
+    use_walk_for_biden: bool = True,
 ):
     """Tries to estimate the expected average move in vote share
     for a given candidate in a given state"""
@@ -74,15 +75,22 @@ def average_swing_all_cycle(
     # Average each cycle
     mean_swing = swings_df.groupby('cycle')['swing_abs'].mean().reset_index()
     if candidate == BIDEN:
-        this_estimate = mean_swing['swing_abs'].mean()
+        if not use_walk_for_biden:
+            # This is the old method just using the mean from the two cycles
+            return mean_swing['swing_abs'].mean()
+        # We default to use the random walk version for the most recent cycle to be a bit more
+        # fair when comparing the current Harris number
+        biden_2020 = mean_swing[mean_swing['cycle'] == 2020]['swing_abs'].mean()
+        biden_walk = biden_2024_random_walk_version(state)
+        this_estimate = (biden_2020 + biden_walk) / 2
     else:
         # Estimate from the Harris 2024 data
         harris_estimate = harris_cycle_moves(state)
-        # Combine biden and harris, more weight on Harris
         this_estimate = (mean_swing['swing_abs'].mean() * 2 + harris_estimate) / 3
     if state is not None:
         # We don't want to overfit to a state. Combine it also with the national estimate
-        average_swing_national = average_swing_all_cycle(candidate, state=None)
+        average_swing_national = average_swing_all_cycle(
+            candidate, state=None, use_walk_for_biden=use_walk_for_biden)
         this_estimate = (this_estimate + average_swing_national) / 2
     return this_estimate
 
@@ -401,7 +409,9 @@ def make_state_movements_plot(
         plt.show()
 
 
-def harris_cycle_moves(state=None) -> float:
+def harris_cycle_moves(
+    state=None
+) -> float:
     """Given the harris data so far, try to estimate a mean absolute move.
     This involves a process of random walks using bootstrapped samples
     of movement so far. This process is pretty rough. There's probably
@@ -413,9 +423,38 @@ def harris_cycle_moves(state=None) -> float:
     if state is not None:
         df = df[df.state == state]
     today = pd.Timestamp.now()
-    days_to_election = election_day[2024] - today.day_of_year
-    days_since_dropout = today.day_of_year - dropout_day.day_of_year
-    dropout_to_election = election_day[2024] - dropout_day.day_of_year
+    return random_walks_variance_estimate(
+        df,
+        today,
+        dropout_day,
+        state,
+    )
+
+
+def biden_2024_random_walk_version(state=None):
+    df = get_margins_df_custom_avg()
+    df = df[df.candidate == BIDEN]
+    df = df[df.cycle == 2024]
+    if state is not None:
+        df = df[df.state == state]
+    return random_walks_variance_estimate(
+        df,
+        dropout_day,
+        pd.to_datetime('2024-03-01'),
+        state,
+    )
+
+
+
+def random_walks_variance_estimate(
+    df,
+    reference_today_date,
+    campaign_start_date,
+    state,
+):
+    days_to_election = election_day[2024] - reference_today_date.day_of_year
+    days_since_dropout = reference_today_date.day_of_year - campaign_start_date.day_of_year
+    dropout_to_election = election_day[2024] - campaign_start_date.day_of_year
     # Get moves on a subset of the days we will use for random walks
     day_lag = int(days_since_dropout / 4)
     swing_df = calc_swing_df(df, day_lag)
@@ -439,7 +478,7 @@ def harris_cycle_moves(state=None) -> float:
     sample_sums = np.sum(samples * trend_following_steps, axis=1)
     # Calculate the average of the sample means
     bootstrap_walks = np.mean(np.abs(sample_sums))
-    print("Bootstrap walks mean", bootstrap_walks)
+    #print("Bootstrap walks mean", bootstrap_walks)
     # If we have enough days we can directly average the move
     can_direct_estimate = days_to_election + 1 < days_since_dropout
     if can_direct_estimate:
@@ -453,6 +492,23 @@ def harris_cycle_moves(state=None) -> float:
 
 
 if __name__ == "__main__":
+    for state in swing_states:
+        print("State", state)
+        print("Walk version")
+        print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=True))
+        print("No walk")
+        print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=False))
+    exit()
+    state = "Pennsylvania"
+    print(biden_2024_random_walk_version(state))
+    swings_df = all_swing_df()  # Will just contain BIDEN's cycles
+    #print(swings_df.end_date.max())
+    #exit()
+    print(swings_df[(swings_df['cycle'] == 2024) & (swings_df['candidate'] == BIDEN) & swings_df['has_full_days']]['swing_abs'].mean())
+    swings_df = swings_df[swings_df['has_full_days']]
+    mean_swing = swings_df.groupby(['cycle', 'state'])['swing_abs'].mean().reset_index()
+    print(mean_swing)
+    exit()
     v = {
         state: average_swing_all_cycle(HARRIS, state)
         for state in swing_states
