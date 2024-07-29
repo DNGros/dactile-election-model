@@ -84,10 +84,6 @@ def get_main_fracs():
         poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
     ))
     return {
-        "biden_movement_prob": round(estimate_fracs(simulate_election_mc(
-            dem_candidate=BIDEN,
-            poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
-        ))[0] * 100),
         "harris_today_prob": round(estimate_fracs(simulate_election_mc(
             dem_candidate=HARRIS,
             poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
@@ -96,7 +92,7 @@ def get_main_fracs():
         "biden_dropout_day_prob": round(estimate_fracs(simulate_election_mc(
             dem_candidate=BIDEN,
             poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
-            reference_today_date=dropout_day,
+            reference_today_date=dropout_day - pd.Timedelta(days=1),
         ))[0] * 100),
         "measured_sim_poll_miss": round(average_poll_miss(
             PollMissKind.RECENT_CYCLE_CORRELATED,

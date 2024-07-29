@@ -120,9 +120,29 @@ def poll_weight(
     reference_today_date,
     time_penalty=default_poll_time_penalty,
     harris_and_before_dropout=False,
+    pollster_name: str = None,
+    exclude_pollsters: list[str] | None = None,  # To answer a reddit question, not actually used
 ):
     """Given factors about a poll return some weighting. This is somewhat
     arbitrary and could be adjusted.
+
+    Args:
+        numeric_grade: The 538 rating of the pollster. Rated out of 3.0.
+        is_projection: If the poll is a projection (not currently used)
+        start_date: The start date of the poll
+        end_date: The end date of the poll
+        pollscore: The 538 pollster score. Lower values are better. Like the
+            numberic grade, but just measures empirical track record, not
+            factors like transparency.
+        sample_size: The number of people polled
+        reference_today_date: The date to use when weighting old polls
+        time_penalty: Approximately the days half life
+        harris_and_before_dropout: If the poll is for Harris and before the
+            dropout day
+        pollster_name: The name of the pollster
+        exclude_pollsters: A list of pollsters to exclude (matches any substring)
+            Not actually used in the function, but is a parameter to make it
+            easier to answer a reddit question.
     """
     # If NaN then numeric_grade 1.5
     if pd.isna(numeric_grade):
@@ -156,6 +176,11 @@ def poll_weight(
     score *= time_decay
     # Especially punish low quality
     #score = score ** 1 + days.days / time_decay
+
+    if exclude_pollsters and pollster_name: # for reddit question
+        for pollster in exclude_pollsters:
+            if pollster_name.lower() in pollster.lower():
+                return 0.0
 
     if score < 0:
         return 0.0
@@ -253,6 +278,7 @@ def build_polls_clean_df(
                     mode == HARRIS
                     and not group['after_dropout'].values[0]
                 ),
+                pollster_name=group['pollster'].values[0],
             ),
         }
         if has_harris:

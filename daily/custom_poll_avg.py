@@ -39,7 +39,10 @@ def get_custom_polling_average(
     #    print("suposed sum", df.custom_weight.sum())
     need_national_data = state is not None and include_national
     df = df[df['end_date'] < pd.Timestamp(f"{cycle}-11-05")]
-    df['after_dropout'] = df['start_date'] > dropout_day
+    df['after_dropout'] = (
+        (df['start_date'] > dropout_day)
+        | (df['end_date'] > dropout_day)
+    )
     if candidate == BIDEN:
         # Make sure not after dropout
         df = df[~df['after_dropout']]
@@ -56,7 +59,20 @@ def get_custom_polling_average(
         national_averages['average'] = slope * national_averages['average'] + intercept
     else:
         national_weight = 0.0
-    for day in pd.date_range(earliest_day, df.end_date.max() if cycle == 2020 else today):
+    #print(df.columns)
+    #print(cycle)
+    #print(df.end_date.max())
+    if candidate == HARRIS:
+        use_end_date = today
+    elif candidate == BIDEN:
+        if cycle == 2024:
+            use_end_date = dropout_day
+        else:
+            use_end_date = df.end_date.max()
+    for day in pd.date_range(
+        earliest_day,
+        use_end_date
+    ):
         if day.day_of_year == today.day_of_year:
             print("TODAY")
         before_day = df[df['end_date'] <= day]
@@ -73,6 +89,7 @@ def get_custom_polling_average(
             reference_today_date=day,
             #time_penalty=9,  Just do the default
             harris_and_before_dropout=(candidate == HARRIS and not x['after_dropout']),
+            pollster_name=x['pollster'],
         ), axis=1)
         #if candidate == HARRIS:
         #    # Multiply values before the dropout by 0.25
@@ -127,14 +144,19 @@ def fit_linear_func_national_to_state(state):
 
 
 def plot_poll_avgs():
-    cycle = 2020
+    cycle = 2024
     #for state in swing_states:
     #    print(state)
     #    print(fit_linear_func_national_to_state(state))
     #exit()
     #state = "Pennsylvania"
     all_errors = []
-    for state in swing_states:
+    states = ["National"] + swing_states
+    from matplotlib import pyplot as plt
+    fig, axs = plt.subplots(len(states), 2, figsize=(15, 4 * len(states)))
+    for i, state in enumerate(["National"] + swing_states):
+        ax_avg = axs[i, 0]
+        ax_counts = axs[i, 1]
         candidate = BIDEN
         averages = get_custom_polling_average(
             candidate,
@@ -142,6 +164,8 @@ def plot_poll_avgs():
             state=state if state != "National" else None,
             include_national=True,
         )
+        #print(averages.end_date.max())
+        #exit()
         with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
             actual_poll_averages = get_margins_df(only_swing_states=False)
             #print(actual_poll_averages.state.unique())
@@ -163,18 +187,16 @@ def plot_poll_avgs():
         import numpy as np
         import seaborn as sns
         sns.set()
-        fig, ax = plt.subplots()
         # plot average and 'percent_of_d_r_share'
-        ax.plot(averages['date'], averages['average'], label='Average')
-        ax.plot(averages['date'], averages['percent_of_d_r_share'], label='Actual')
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-        plt.xticks(rotation=45)
+        ax_avg.plot(averages['date'], averages['average'], label='Custom Average')
+        ax_avg.plot(averages['date'], averages['percent_of_d_r_share'], label="538's Avg")
+        ax_avg.xaxis.set_major_locator(mdates.MonthLocator())
+        ax_avg.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+        #plt.xticks(rotation=45)
         #plt.legend()
-        plt.title(f"{candidate} {state} {cycle} Polling Average")
-        ax.set_ylim(40, 60)
-        plt.tight_layout()
-        plt.show()
+        ax_avg.set_title(f"{candidate} {state} {cycle} Polling Average")
+        ax_avg.set_ylim(40, 60)
+        ax_avg.legend()
         # Calculate the mean squared error
         averages['error'] = ((averages['average']) - averages['percent_of_d_r_share'])**2
         print("Mean local weight sum:")
@@ -183,21 +205,33 @@ def plot_poll_avgs():
         print(np.sqrt(averages['error'].mean()))
         print("Mean squared error:")
         print(averages['error'].mean())
-        # Plot the weight sum
-        fig, ax = plt.subplots()
-        ax.plot(averages['date'], np.sqrt(averages['total_weight_sum']), label='Local Weight Sum')
-        ax.xaxis.set_major_locator(mdates.MonthLocator())
-        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-        # set title
-        plt.title(f"{state} {cycle} Polling Weight Sum")
-        # set x-axis label
-        plt.xlabel("Date")
-        # set y-axis label
-        plt.ylabel("Sqrt Weight Sum")
-        plt.xticks(rotation=45)
-        plt.tight_layout()
-        plt.show()
         all_errors.append(averages['error'].mean())
+        # Add mean squared error to plot
+        ax_avg.text(
+            x=0.05,
+            y=0.95,
+            s=f"Mean Squared Error: {averages['error'].mean():.2f}",
+            transform=ax_avg.transAxes,
+            verticalalignment='top',
+            horizontalalignment='left',
+            fontsize=12,
+        )
+        # Plot the weight sum
+        if True:
+            ax_counts.plot(averages['date'], averages['total_weight_sum'], label='Weight Sum')
+            ax_counts.xaxis.set_major_locator(mdates.MonthLocator())
+            ax_counts.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+            # set title
+            ax_avg.set_title(f"{state} {cycle} Polling Weight Sum")
+            # set x-axis label
+            ax_counts.set_xlabel("Date")
+            # set y-axis label
+            ax_counts.set_ylabel("Weight Sum")
+            ax_counts.legend()
+            #plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(cur_path / f"dailyarticlegen/imgs/{cycle}_avg_compare.svg")
+    plt.show()
     print("Average error all")
     print(sum(all_errors) / len(all_errors))
 
@@ -373,8 +407,11 @@ def get_sim_custom_averages(
     ]
     state_to_avg = {}
     for state in states:
+        avg = find_average_for_day(date, candidate, state)
+        if avg is None:
+            raise ValueError(f"No average for {state} on {date} for {candidate}")
         state_to_avg[convert_state_name_to_state_code(state)] = {
-            'average': find_average_for_day(date, candidate, state) / 100,
+            'average': avg / 100,
             'total_weight_sum': find_weight_sum_for_day(date, candidate, state),
         }
     return state_to_avg
@@ -402,20 +439,29 @@ def average_estimated_miss():
 
 
 if __name__ == "__main__":
-    #print(find_weight_sum_for_day(pd.Timestamp.now(), candidate=HARRIS, state=None))
+    #candidate = BIDEN
+    #cycle = 2024
+    #state = None
+    #df = build_polls_clean_df(
+    #    mode=candidate,
+    #    start_date=pd.Timestamp(f'{cycle}-02-01'),
+    #    cycle=cycle,
+    #    state=state,
+    #    reference_date=dropout_day,
+    #)
+    #with pd.option_context(
+    #    'display.max_rows', None, 'display.max_columns', None, 'display.width', None,
+    #    # Don't use scientific notation
+    #    'display.float_format', lambda x: '%.5f' % x,
+    #    'display.max_colwidth', 20,
+
+    #):
+    #    # Sort by custom_weight
+    #    df.sort_values(by='custom_weight', ascending=False, inplace=True)
+    #    print(df)
     #exit()
-    #print(get_sim_custom_averages(pd.Timestamp.now()))
-    #exit()
+    ###
     #for state in swing_states:
     #    print(state)
-    #    print(find_election_day_2020_weight_sum(state))
-    #for weight in range(1, 25):
-    #    print("weight", weight, "error", estimate_margin_error(weight, target_full_error=3.8))
-    print(average_estimated_miss())
-    exit()
-
-    for state in swing_states:
-        print(state)
-        print(fit_linear_func_national_to_state(state))
+    #    print(fit_linear_func_national_to_state(state))
     plot_poll_avgs()
-    #print(average_election_day_2020_weight_sum())
