@@ -18,6 +18,7 @@ cur_path = Path(__file__).parent.absolute()
 from joblib import Memory
 
 cache = Memory(cur_path / "../cache")
+#cache = Memory(None)
 
 
 @functools.cache
@@ -41,7 +42,7 @@ def get_custom_polling_average(
     df = df[df['end_date'] < pd.Timestamp(f"{cycle}-11-05")]
     df['after_dropout'] = (
         (df['start_date'] > dropout_day)
-        | (df['end_date'] > dropout_day)
+        & (df['end_date'] > dropout_day)
     )
     if candidate == BIDEN:
         # Make sure not after dropout
@@ -91,6 +92,31 @@ def get_custom_polling_average(
             harris_and_before_dropout=(candidate == HARRIS and not x['after_dropout']),
             pollster_name=x['pollster'],
         ), axis=1)
+
+        #if day.day_of_year == today.day_of_year:
+        #    i = -2
+        #    last_row_before_day = before_day.iloc[i]
+        #    print("Before df day")
+        #    print(last_row_before_day)
+        #    last_row_df = df.iloc[i]
+        #    print("Last row df")
+        #    print(last_row_df)
+        #    print("before sum")
+        #    print(before_day_weight.sum())
+        #    print("before not new")
+        #    print(before_day.custom_weight.sum())
+        #    print("df sum")
+        #    print(df.custom_weight.sum())
+        #    print(f"{len(df)=} {len(before_day)=}")
+        #    print("before last val")
+        #    print(before_day_weight.iloc[i])
+
+        #    before_day['new_custom'] = before_day_weight
+        #    before_day['weight_match'] = before_day.apply(lambda x: abs(x['custom_weight'] - x['new_custom']) < 0.001, axis=1)
+        #    with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
+        #        print(before_day[['new_custom', 'custom_weight', 'weight_match', 'pollscore', 'sample_size', 'numeric_grade', 'pollster', 'start_date', 'end_date']])
+        #    exit()
+
         #if candidate == HARRIS:
         #    # Multiply values before the dropout by 0.25
         #    before_day_weight *= before_day['after_dropout'].apply(lambda x: 0.25 if x else 1)
@@ -113,8 +139,6 @@ def get_custom_polling_average(
             (frac_weighted.sum() + (nat_value * national_weight))
             / (local_weight_sum + national_weight)
         )
-        # Push further from 50
-        #average = 0.5 + (average - 0.5)
         averages.append({
             'date': day,
             'average': average,
@@ -439,6 +463,23 @@ def average_estimated_miss():
 
 
 if __name__ == "__main__":
+    print(find_weight_sum_for_day(
+        date=pd.Timestamp.now(),
+        state=None,
+        candidate=HARRIS,
+    ))
+    df = build_polls_clean_df(mode=HARRIS, state=None)
+    print(df.custom_weight.sum())
+    exit()
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
+        averages = get_custom_polling_average(
+            HARRIS,
+            cycle=2024,
+            state=None,
+            include_national=True,
+        )
+        print(averages)
+    exit()
     #candidate = BIDEN
     #cycle = 2024
     #state = None

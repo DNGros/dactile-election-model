@@ -7,7 +7,7 @@ from election_statics import convert_state_name_to_state_code, HARRIS, BIDEN
 from get_poll_data import get_pres_data_from_csv, get_pres_data_from_csv_past_cycles
 import pandas as pd
 
-from hyperparams import default_poll_time_penalty, swing_states
+from hyperparams import default_poll_time_penalty, swing_states, dropout_day
 from util import pd_all_columns, pd_all_rows
 import numpy as np
 
@@ -92,7 +92,10 @@ def get_avail_filtered(
     if start_date is not None:
         df = df[df['start_date'] >= start_date]
     df['state_code'] = df['state'].apply(convert_state_name_to_state_code)
-    df['after_dropout'] = df['start_date'] > pd.to_datetime('2024-07-21')
+    df['after_dropout'] = (
+        (df['start_date'] > dropout_day)
+        & (df['end_date'] > dropout_day)
+    )
     return df
 
 

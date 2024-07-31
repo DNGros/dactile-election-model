@@ -312,7 +312,7 @@ def simulate_election_once(
 
 @cache.cache()
 def simulate_election_mc(
-    n_simulations: int = 10_000,
+    n_simulations: int = 20_000,
     dem_candidate: str = BIDEN,
     poll_miss: PollMissKind = PollMissKind.RECENT_CYCLE_CORRELATED,
     chaos_dem_mean: float = 0,
@@ -347,7 +347,7 @@ def simulate_election_mc(
 
 def average_poll_miss(
     poll_miss,
-    n_simulations=10_000,
+    n_simulations=20_000,
 ):
     """Check that the empirically measured poll miss is close
     to what we expect. Note we are doing this on the average miss of both

@@ -13,10 +13,14 @@ from hyperparams import default_movement_cur_cycle_average_multiple, harris_delt
     default_poll_time_penalty, dropout_day
 from simulate import estimate_fracs, simulate_election_mc, PollMissKind, average_poll_miss
 import pandas as pd
+import pytz
 
 def get_article_vars():
+    now = pd.Timestamp.now(pytz.timezone('America/Los_Angeles'))
     vals = {
-        "cur_date": pd.Timestamp.now().strftime("%Y-%m-%d"),
+        "cur_date": now.strftime("%Y-%m-%d"),
+        "cur_date_utc_iso": pd.Timestamp.utcnow().isoformat(),
+        "cur_date_time_friendly": now.strftime("%B %d, %Y %I:%M%p %Z"),
         "title": "What is the probability Harris wins? Building a Statistical Model.",
         "publish_date": "2024-07-26",
     }

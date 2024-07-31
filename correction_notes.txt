@@ -4,3 +4,7 @@
         This now better matches the actual values used in the model.
         While these displayed average numbers change ~0.1 point, the
         topline estimates should be unchanged (as that was always filtering)
+- 7/30: Fix improper weighting when the end date was
+        after the dropout day but the start date was not. Slight adjustment
+        in poll count show in main text. Did not appear to change top-line on
+        this date (either because change small enough or because it two different code paths)
