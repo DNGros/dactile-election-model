@@ -2,19 +2,25 @@ import pandas as pd
 from markupsafe import Markup
 
 from daily.custom_poll_avg import find_national_avg_scaled_for_state
+from daily.past_predictions import generate_html_calendar, read_all_past_vars, read_all_top_lines
 from election_statics import HARRIS
 from harris.harris_explore import build_polls_clean_df
 
 from hyperparams import swing_states
 
 
-def make_all_daily_tables():
+def make_all_daily_tables(article_vars):
+    current_top_line = article_vars['top_line_prob']
     return {
         "harris_national_table": Markup(harris_only_table_html()),
         "swing_state_tables": {
             state: Markup(harris_only_table_html(state))
             for state in swing_states
-        }
+        },
+        "calendar": Markup(generate_html_calendar(
+            read_all_top_lines(),
+            today_value=current_top_line,
+        )),
     }
 
 
@@ -42,12 +48,12 @@ def harris_only_table_html(
             'national_row': True,
         }
         df = pd.concat([pd.DataFrame([new_row]), df])
-        print("CONNNATJj:w")
-        with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
-            print(df)
+        #print("CONNNATJj:w")
+        #with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', None):
+        #    print(df)
     df = df.sort_values('custom_weight', ascending=False)
     lines = []
-    lines.append("<table>")
+    lines.append("<table class='gen_polls_table'>")
     lines.append("<thead>")
     lines.append("<tr>")
 
