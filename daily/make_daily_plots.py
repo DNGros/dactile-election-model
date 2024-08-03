@@ -184,5 +184,6 @@ def make_available_polls_plot(save_path=None):
 
 
 if __name__ == "__main__":
+    #make_all_daily_plots()
     make_available_polls_plot()
 

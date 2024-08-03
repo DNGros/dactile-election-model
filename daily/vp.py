@@ -24,7 +24,7 @@ cache = Memory(cur_path / "../cache")
 default_params = {
     "dem_candidate": HARRIS,
     "poll_miss": PollMissKind.RECENT_CYCLE_CORRELATED,
-    "average_movement": 0.0,
+    "average_movement": 0,
 }
 
 
@@ -77,7 +77,11 @@ def compute_win_chance_shifted(mean, std, state, sims, corr_dampening=None):
         shifts = np.concatenate([half_shifts, other_half_shifts])
         assert shifts.shape == (len(sims), len(swing_state_codes))
 
+
     for i, sim in enumerate(tqdm(sims, desc="Adjusting state", total=len(sims))):
+        #if mean == 0 and std == 0:
+        #    new_sims.append(sim)
+        #    continue
         election = sim.election
         results = election.state_results.copy()
         for state_ind, change_state in enumerate(swing_state_codes):
@@ -117,14 +121,22 @@ def get_particular_value_state_shift(
     std,
     corr_dampening=None,
 ):
+    #sims = simulate_election_mc(
+    #    dem_candidate=HARRIS,
+    #    poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
+    #    average_movement=0,
+    #)
     sims = simulate_election_mc(**default_params)
     _, _, national, state = compute_win_chance_shifted(mean, std, state, sims, corr_dampening)
     return national, state
 
 
-#means = [0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.05, 0.1]
+
 means = [0, 0.005, 0.01, 0.015, 0.05]
 std_devs = [0, 0.01, 0.02, 0.04]
+
+#means = [0]
+#std_devs = [0]
 
 @cache.cache()
 def vp_adjust_vals_dict(state, corr_dampening=None):
@@ -180,6 +192,13 @@ def make_vp_shift_table(state, corr_dampening=None):
 if __name__ == "__main__":
     print("no cor")
     print(vp_adjust_vals_dict("PA", corr_dampening=None))
+    overall_frac, state_frac = estimate_fracs(simulate_election_mc(
+        dem_candidate=HARRIS,
+        poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
+        average_movement=0,
+    ))
+    print(overall_frac, state_frac)
+    exit()
     #print("with cor")
     #print(vp_adjust_vals_dict("PA", corr_dampening=3))
     #print(make_vp_shift_table("PA"))
