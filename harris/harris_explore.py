@@ -10,6 +10,7 @@ import pandas as pd
 from hyperparams import default_poll_time_penalty, swing_states, dropout_day
 from util import pd_all_columns, pd_all_rows
 import numpy as np
+import matplotlib.pyplot as plt
 
 cur_path = Path(__file__).parent.absolute()
 
@@ -481,11 +482,32 @@ def harris_swing_state_table_html():
     return '\n'.join(lines), swing_state_to_avg
 
 
-if __name__ == "__main__":
+def plot_creation_times():
     with pd.option_context('display.max_columns', None, 'display.width', None, 'display.max_rows', None):
-        print(get_pres_data_from_csv().head(100))
+        df = get_pres_data_from_csv()
+        df = df[df['answer'].str.lower().str.contains('harris')]
+        print(df)
+        created_at = df['created_at'].apply(pd.Timestamp)
+        # plot the times of creation bucketed by hour
+        created_at.dt.hour.hist(
+            bins=list(range(25)),
+            edgecolor='black',
+        )
+        plt.xticks(ticks=range(24), labels=[f'{hour}' for hour in range(24)])
+        # set the x-axis label
+        plt.xlabel('Hour of Day (I think eastern)')
+        plt.ylabel('Number of Polls')
+        plt.title('Creation Time of Harris Polls (Up to Aug 1)')
+        plt.savefig(cur_path / 'harris_poll_add_time_aug1.svg')
+        plt.show()
+
+
+if __name__ == "__main__":
+    plot_creation_times()
+    exit()
     #explore_avail_biden_harris()
-    #explore_avail_harris()
+    #df = explore_avail_harris()
+    #print(df)
     #build_harris_national_table_df()
     #Jj:w
     # print(harris_on())

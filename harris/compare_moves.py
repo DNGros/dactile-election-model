@@ -1,5 +1,7 @@
 import math
 import joblib
+
+from daily.custom_poll_avg import estimate_margin_error
 from election_statics import BIDEN, HARRIS
 import matplotlib.pyplot as plt
 import numpy as np
@@ -152,5 +154,7 @@ def plot_average_harris_delta_error(
 
 
 if __name__ == "__main__":
+    #print(average_swing_all_cycle(HARRIS, "Florida"))
+    #print(estimate_margin_error(1.7) / 2)
     plot_average_move_to_win_prob()
     #plot_average_harris_delta_error()

@@ -2,7 +2,7 @@ import functools
 import random
 import math
 from collections import defaultdict
-from typing import Literal
+from typing import Literal, NamedTuple
 import numpy as np
 from enum import StrEnum
 from scipy import stats
@@ -100,6 +100,7 @@ def initialize_election(
     chaos_std_dev=0.0,
     correlation_power: float = 1.0,
     polls_source: Literal['538', 'custom'] = 'custom',
+    state_dem_share_adjustment_dist: dict[str, 'DistributionParams'] = None,
 ):
     state_beliefs: list[StateBeliefs] = []
 
@@ -110,6 +111,8 @@ def initialize_election(
     else:
         chaos_adjust = 0
     if polls_source == '538':
+        if state_dem_share_adjustment_dist:
+            raise NotImplementedError
         state_polls = get_state_averages()
         for state_code, df in state_polls.items():
             nearest_date = get_nearest_date(df, date)
@@ -140,10 +143,17 @@ def initialize_election(
             candidate=dem_candidate,
         )
         for state_code, state_data in state_code_to_dem_frac.items():
+            dem_share = state_data['average']
+            if (
+                state_dem_share_adjustment_dist
+                and state_code in state_dem_share_adjustment_dist
+            ):
+                vals = state_dem_share_adjustment_dist[state_code]
+                dem_share += stats.norm(loc=vals.loc, scale=vals.scale).rvs()
             belief = StateBeliefs(
                 state=state_code,
-                frac_dem_avg=state_data['average'],
-                frac_rep_avg=1 - state_data['average'],
+                frac_dem_avg=dem_share,
+                frac_rep_avg=1 - dem_share,
                 frac_other_avg=0,
                 total_votes=baseline.state_results[state_code].total_votes,
                 dem_bump_from_new_candidate=get_dem_bump_for_candidate(
@@ -310,6 +320,11 @@ def simulate_election_once(
     return Election(state_results, [], dem_candidate=election.dem_candidate)
 
 
+class DistributionParams(NamedTuple):
+    loc: float    # Mean
+    scale: float  # std
+
+
 @cache.cache()
 def simulate_election_mc(
     n_simulations: int = 20_000,
@@ -322,6 +337,7 @@ def simulate_election_mc(
     average_movement: float = None,
     poll_source: Literal['538', 'custom'] = 'custom',
     reference_today_date: pd.Timestamp = pd.Timestamp.now().normalize(),
+    state_dem_share_adjustment_dist: dict[str, DistributionParams] = None,
 ) -> list[ElectionScore]:
     """The starting point of monte carlo simulations of the election"""
     scores = []
@@ -334,6 +350,7 @@ def simulate_election_mc(
             correlation_power=correlation_power,
             polls_source=poll_source,
             date=reference_today_date.strftime("%Y-%m-%d"),
+            state_dem_share_adjustment_dist=state_dem_share_adjustment_dist,
         )
         new_election = simulate_election_once(
             election,

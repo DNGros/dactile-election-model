@@ -3,6 +3,7 @@ from markupsafe import Markup
 
 from daily.custom_poll_avg import find_national_avg_scaled_for_state
 from daily.past_predictions import generate_html_calendar, read_all_past_vars, read_all_top_lines
+from daily.vp import make_vp_shift_table, get_particular_value_state_shift
 from election_statics import HARRIS
 from harris.harris_explore import build_polls_clean_df
 
@@ -21,6 +22,20 @@ def make_all_daily_tables(article_vars):
             read_all_top_lines(),
             today_value=current_top_line,
         )),
+        "vp_pa_shift_table": Markup(make_vp_shift_table("PA")),
+        "vp_az_shift_table": Markup(make_vp_shift_table("AZ")),
+        #"vp_pa_correlated_shift_table": Markup(make_vp_shift_table("PA", corr_factor=3)),
+        "vp_pa_shift_1_corr_3": get_particular_value_state_shift(
+            "PA",
+            mean=0.01,
+            std=0.01,
+            corr_dampening=3,
+        ),
+        "vp_pa_shift_1": get_particular_value_state_shift(
+            "PA",
+            mean=0.01,
+            std=0.01,
+        )
     }
 
 

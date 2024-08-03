@@ -1,4 +1,5 @@
 import functools
+import statsmodels.stats.correlation_tools
 import scipy.integrate as integrate
 from scipy import stats
 import gzip
@@ -209,6 +210,15 @@ def get_multivariate_normal_dist(
     return dist, states
 
 
+def correlation_dict_to_matrix(correlation_dict):
+    states = list(correlation_dict.keys())
+    return (
+        np.array(
+            [[correlation_dict[state1][state2] for state2 in states] for state1 in states]),
+        states
+    )
+
+
 @functools.cache
 def get_multivariate_t_dist(
     source: Literal['538', 'eco'],
@@ -285,6 +295,48 @@ def corr2cov(corr, std):
     std_ = np.asanyarray(std)
     cov = corr * np.outer(std_, std_)
     return cov
+
+
+def get_correlation_matrix_pow_for_one_state(
+    source: Literal['538', 'eco'],
+    state: str,
+    power: float,
+    states: list[str] = None
+):
+    """Here we want to get a version of a correlation matrix, but we just
+    want the correlations to one state raised to some power"""
+    if source == '538':
+        correlation_dict = load_five_thirty_eight_correlation()
+    elif source == 'eco':
+        correlation_dict = load_economist_correlations()
+    else:
+        raise ValueError("Invalid")
+    if states:
+        correlation_dict = {
+            state: {
+                state2: correlation_dict[state][state2] for state2 in states
+            } for state in states
+        }
+    matrix, n_states = correlation_dict_to_matrix(correlation_dict)
+    assert states == n_states
+    # Now make a new version with the given state powered
+    state_index = states.index(state)
+    # start with identity matrix
+    v = np.eye(matrix.shape[0])
+    # Copy a scaled version of the row
+    v[state_index] = matrix[state_index] ** power
+    # copy col
+    v[:, state_index] = matrix[:, state_index] ** power
+    if not is_positive_semidefinite(v):
+        v = statsmodels.stats.correlation_tools.cov_nearest(v, threshold=1e-6)
+    assert is_positive_semidefinite(v)
+    assert np.allclose(v, v.T)
+    return v, states
+
+
+def is_positive_semidefinite(M):
+    eigenvalues = np.linalg.eigvals(M)
+    return np.all(eigenvalues >= 0)
 
 
 if __name__ == "__main__":

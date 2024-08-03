@@ -101,7 +101,7 @@ def get_main_fracs():
         "measured_sim_poll_miss": round(average_poll_miss(
             PollMissKind.RECENT_CYCLE_CORRELATED,
         ) * 100, 1),
-        "top_line_prob": round(top_frac * 100, 1),
+        "top_line_prob": round(top_frac * 100, 2),
         "state_fracs": top_line_state_fracs,
     }
 

@@ -485,7 +485,7 @@ def random_walks_variance_estimate(
         direct_swing_df = calc_swing_df(df, days_to_election)
         direct = direct_swing_df['swing_abs'].mean()
         direct_weight = (days_since_dropout / 2) / (dropout_to_election / 2)
-        direct_weight *= 0.75
+        #direct_weight *= 0.75
         direct_weight = max(0, min(1, direct_weight))
         return direct * direct_weight + bootstrap_walks * (1 - direct_weight)
     return bootstrap_walks
