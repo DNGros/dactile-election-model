@@ -162,7 +162,14 @@ def poll_weight(
         pollscore = 0.0
     score *= np.interp(pollscore, [-1.1, 0.5], [1.0, 0.6])
     # Some sample size consideration
+    if pd.isna(sample_size):
+        if numeric_grade > 2.0:
+            sample_size = 500
+        else:
+            sample_size = 300
     score *= np.interp(sample_size, [200, 900], [0.7, 1.0])
+    if pd.isna(start_date) or pd.isna(end_date):
+        return 0
     # Time decay
     end_days = (reference_today_date - end_date).days
     if end_days < 0:
@@ -503,6 +510,8 @@ def plot_creation_times():
 
 
 if __name__ == "__main__":
+    harris_swing_state_table_html()
+    exit()
     plot_creation_times()
     exit()
     #explore_avail_biden_harris()

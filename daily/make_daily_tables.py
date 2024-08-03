@@ -90,6 +90,10 @@ def harris_only_table_html(
         else:
             numeric_grade = f"{numeric_grade:.1f}"
 
+        if f"{row['custom_weight']:.2f}" == "nan":
+            print("NAN WEIGHT")
+            print(row)
+            raise ValueError("NAN WEIGHT")
         lines.append(f"<td>{row['custom_weight']:.2f}</td>")
         if not row.get('national_row', False):
             lines.append(f'<td><a href="{row["url"]}">{row["pollster"]}</a> ({numeric_grade})</td>')
@@ -118,4 +122,4 @@ def harris_only_table_html(
 
 
 if __name__ == "__main__":
-    print(harris_only_table_html("Pennsylvania"))
+    print(harris_only_table_html("Georgia"))
