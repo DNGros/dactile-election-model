@@ -507,11 +507,24 @@ def plot_creation_times():
         plt.title('Creation Time of Harris Polls (Up to Aug 1)')
         plt.savefig(cur_path / 'harris_poll_add_time_aug1.svg')
         plt.show()
+        # Make a histogram with day of week
+        df = get_pres_data_from_csv()
+        #df = df[df['answer'].str.lower().str.contains('harris')]
+        created_at = df['created_at'].apply(pd.Timestamp)
+        created_at.dt.dayofweek.hist(
+            bins=list(range(8)),
+            edgecolor='black',
+        )
+        plt.xticks(ticks=range(7), labels=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
+        plt.xlabel('Day of Week')
+        plt.ylabel('Number of Polls')
+        plt.show()
+
 
 
 if __name__ == "__main__":
-    harris_swing_state_table_html()
-    exit()
+    #harris_swing_state_table_html()
+    #exit()
     plot_creation_times()
     exit()
     #explore_avail_biden_harris()

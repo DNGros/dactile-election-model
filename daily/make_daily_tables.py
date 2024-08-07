@@ -22,20 +22,21 @@ def make_all_daily_tables(article_vars):
             read_all_top_lines(),
             today_value=current_top_line,
         )),
-        "vp_pa_shift_table": Markup(make_vp_shift_table("PA")),
-        "vp_az_shift_table": Markup(make_vp_shift_table("AZ")),
-        #"vp_pa_correlated_shift_table": Markup(make_vp_shift_table("PA", corr_factor=3)),
-        "vp_pa_shift_1_corr_3": get_particular_value_state_shift(
-            "PA",
-            mean=0.01,
-            std=0.01,
-            corr_dampening=3,
-        ),
-        "vp_pa_shift_1": get_particular_value_state_shift(
-            "PA",
-            mean=0.01,
-            std=0.01,
-        )
+        # VP stuff
+        #"vp_pa_shift_table": Markup(make_vp_shift_table("PA")),
+        #"vp_az_shift_table": Markup(make_vp_shift_table("AZ")),
+        ###"vp_pa_correlated_shift_table": Markup(make_vp_shift_table("PA", corr_factor=3)),
+        #"vp_pa_shift_1_corr_3": get_particular_value_state_shift(
+        #    "PA",
+        #    mean=0.01,
+        #    std=0.01,
+        #    corr_dampening=3,
+        #),
+        #"vp_pa_shift_1": get_particular_value_state_shift(
+        #    "PA",
+        #    mean=0.01,
+        #    std=0.01,
+        #)
     }
 
 

@@ -96,6 +96,7 @@ def compute_win_chance_shifted(mean, std, state, sims, corr_dampening=None):
                 if state != change_state:
                     this_shift /= corr_dampening
                 new_dem_share = old_dem_share + this_shift
+            new_dem_share = min(1, max(0, new_dem_share))
             results[change_state] = StateResult(
                 state=change_state,
                 winner=DEM if new_dem_share > 0.5 else REP,
@@ -132,7 +133,8 @@ def get_particular_value_state_shift(
 
 
 
-means = [0, 0.005, 0.01, 0.015, 0.05]
+means = [0, 0.0025, 0.005, 0.01, 0.015, 0.05]
+#means = [0, 0.0025, 0.005, 0.01, 0.1]
 std_devs = [0, 0.01, 0.02, 0.04]
 
 #means = [0]
@@ -191,7 +193,12 @@ def make_vp_shift_table(state, corr_dampening=None):
 
 if __name__ == "__main__":
     print("no cor")
-    print(vp_adjust_vals_dict("PA", corr_dampening=None))
+    vals = vp_adjust_vals_dict("PA", corr_dampening=None)
+    pprint({
+        (mean, std): (round(val[0]*100,1), round(val[1]*100,1))
+        for (mean, std), val in vals.items()
+        if std == 0
+    })
     overall_frac, state_frac = estimate_fracs(simulate_election_mc(
         dem_candidate=HARRIS,
         poll_miss=PollMissKind.RECENT_CYCLE_CORRELATED,
