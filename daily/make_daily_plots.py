@@ -9,6 +9,7 @@ from daily.custom_poll_avg import get_custom_polling_average, find_biden_dropout
     find_election_day_2020_weight_sum
 from election_statics import HARRIS, BIDEN
 from harris.typical_variances import make_state_movements_plot, get_margins_df_custom_avg, election_day
+from harris.variance_demo import make_variance_demo_plot
 from simulate import estimate_fracs, simulate_election_mc, PollMissKind
 from whitmer.plotting import plot_election_map
 import seaborn as sns
@@ -45,6 +46,7 @@ def make_all_daily_plots():
         title=f"If the Election was Today ({(today.strftime('%b %d'))})",
         candidate_name="Harris",
     )
+    p = make_variance_demo_plot(plot_base / "variance_demo.svg")
 
     margin_df = get_margins_df_custom_avg(True)
     p = make_state_movements_plot(margin_df, plot_base / "state_movements_mobile.svg", is_mobile=True)

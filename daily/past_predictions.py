@@ -53,6 +53,12 @@ def generate_html_calendar(
 
     events = {
         "2024-07-21": ("👴🏻", "Biden Drops Out"),
+        "2024-08-06": ("🌟VP", "Harris Picks Walz as VP (from North Star State)"),
+        "2024-08-19": ("🐴🎉", "Start of DNC"),
+        "2024-08-20": ("🐴🎉", "DNC Day 2"),
+        "2024-08-21": ("🐴🎉", "DNC Day 3"),
+        "2024-08-22": ("🐴🎆", "End of DNC"),
+        "2024-09-10": ("💬", "Scheduled Debate"),
         "2024-11-05": ("🗳️", "Election Day"),
     }
     # Set start and end dates
@@ -110,7 +116,7 @@ def generate_html_calendar(
                 # Check to see if there is an event on this day
                 if current_date.strftime("%Y-%m-%d") in events:
                     event_emoji, event_text = events[current_date.strftime("%Y-%m-%d")]
-                    day_val += f"{event_emoji}"
+                    day_val += f"<span class='emoji_hint' title='{event_text}'>{event_emoji}</span>"
 
                 value_str = f"{round(value)}%" if value is not None else ''
                 if value and date_str != today_date.strftime("%Y-%m-%d"):
