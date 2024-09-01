@@ -492,14 +492,17 @@ def random_walks_variance_estimate(
 
 
 if __name__ == "__main__":
-    for state in swing_states:
-        print("State", state)
-        print("Walk version")
-        print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=True))
-        print("No walk")
-        print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=False))
+    #for state in swing_states:
+    #    print("State", state)
+    #    print("Walk version")
+    #    print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=True))
+    #    print("No walk")
+    #    print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=False))
+    #exit()
+    state = "Nevada"
+    print("Average swing all cycles", average_swing_all_cycle(HARRIS, state))
     exit()
-    state = "Pennsylvania"
+
     print(biden_2024_random_walk_version(state))
     swings_df = all_swing_df()  # Will just contain BIDEN's cycles
     #print(swings_df.end_date.max())

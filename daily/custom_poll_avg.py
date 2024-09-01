@@ -464,7 +464,7 @@ def average_estimated_miss():
 
 if __name__ == "__main__":
     print(estimate_margin_error(
-        3.5
+        1.5
     ) / 2)
     exit()
     print(find_weight_sum_for_day(

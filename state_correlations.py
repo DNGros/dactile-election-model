@@ -23,18 +23,22 @@ cache = Memory(cur_path / "cache", verbose=1)
 @functools.cache
 @cache.cache()
 def load_five_thirty_eight_correlation():
-    url = "https://roadtolarissa.com/data/forecast-correlation/pairs-538.json"
-    response = requests.get(url)
-    data = json.loads(response.text)
+    #url = "https://roadtolarissa.com/data/forecast-correlation/pairs-538.json"
+    #response = requests.get(url)
+    #data = json.loads(response.text)
+    p = cur_path / "correlation_data/pairs-538.json.gz"
+    data = json.loads(gzip.decompress(p.read_bytes()))
     return _proc_correlations(data)
 
 
 @functools.cache
 @cache.cache()
 def load_economist_correlations():
-    url = "https://roadtolarissa.com/data/forecast-correlation/pairs-eco.json"
-    response = requests.get(url)
-    data = json.loads(response.text)
+    #url = "https://roadtolarissa.com/data/forecast-correlation/pairs-eco.json"
+    #response = requests.get(url)
+    #data = json.loads(response.text)
+    p = cur_path / "correlation_data/pairs-eco.json.gz"
+    data = json.loads(gzip.decompress(p.read_bytes()))
     return _proc_correlations(data)
 
 

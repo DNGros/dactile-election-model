@@ -23,6 +23,8 @@ def print_state_sets(sims):
     print("Base frac dem:", frac)
     did_win_states = Counter()
     did_win_states_and_was_win = Counter()
+    did_win_full_set = Counter()
+    did_win_full_set_and_was_win = Counter()
     total_wins = 0
     for sim in sims:
         if sim.winner == DEM:
@@ -32,8 +34,12 @@ def print_state_sets(sims):
             for state, result in sim.election.state_results.items()
             if result.winner == DEM
         ]
+        did_win_full_set[tuple(sorted(dem_win_states))] += 1
+        if sim.winner == DEM:
+            did_win_full_set_and_was_win[tuple(sorted(dem_win_states))] += 1
         for i in range(1, len(dem_win_states) + 1):
             for combo in itertools.combinations(dem_win_states, i):
+                combo = tuple(sorted(combo))
                 did_win_states[combo] += 1
                 if sim.winner == DEM:
                     did_win_states_and_was_win[combo] += 1
@@ -50,6 +56,23 @@ def print_state_sets(sims):
         combo_str = "{" + ", ".join(combo) + "}"
         print(f"{combo_str}, {time_d_wins * 100:.1f}%, {time_d_wins_and_wins*100:.1f}%, {frac*100:.1f}%, {win_nationally_given_win_states*100:.1f}%")
         #print(combo, round(frac*100,1), round(count / total_wins * 100, 1))
+
+    print("Full sets not blue wall")
+    print("states, P(D_wins_states), P(D_win_states ∩ D_win_nationally), P(D_win_states | D_win_nationally), P(D_win_nationally | D_win_states)")
+    not_blue_wall = 0
+    for combo, count in did_win_full_set_and_was_win.most_common(500):
+        win_count = did_win_full_set[combo]
+        if "PA" in combo and "MI" in combo and "WI" in combo:
+            continue
+        not_blue_wall += count
+        time_d_wins = win_count / len(sims)
+        time_d_wins_and_wins = count / len(sims)
+        frac = count / total_wins
+        win_nationally_given_win_states = count / win_count
+        combo_str = "{" + ", ".join(combo) + "}"
+        print(f"{combo_str}, {time_d_wins * 100:.3f}%, {time_d_wins_and_wins*100:.3f}%, {frac*100:.3f}%, {win_nationally_given_win_states*100:.3f}%")
+        #print(combo, round(frac*100,1), round(count / total_wins * 100, 1))
+    print("Not blue wall", not_blue_wall / total_wins)
 
 
 if __name__ == "__main__":
