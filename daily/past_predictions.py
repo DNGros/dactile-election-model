@@ -13,11 +13,19 @@ cache = Memory(cur_path / "cache", verbose=0)
 def read_past_vars(
     date: pd.Timestamp,
 ):
-    base_url = "http://dactile.net/p/election-model-archive/"
+    base_url = "https://dactile.net/p/election-model-archive/"
     url = base_url + date.strftime("%Y-%m-%d") + "/article_vars.json"
     r = requests.get(url)
     r.raise_for_status()
-    return r.json()
+    try:
+        json = r.json()
+    except requests.exceptions.JSONDecodeError:
+        #print(date)
+        #print(url)
+        #print(r.text)
+        #print("GAAAAAAAAH")
+        raise
+    return json
 
 
 def read_all_past_vars(

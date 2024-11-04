@@ -195,6 +195,9 @@ def poll_weight(
 
     if score < 0:
         return 0.0
+    # just nyt test
+    #if "Siena/NYT" not in pollster_name:
+    #    score *= 0.01
     return score
 
 

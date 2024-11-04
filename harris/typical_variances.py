@@ -33,6 +33,8 @@ def calc_swing_df(
     df,
     day_lag=ASSUMED_DAYS_TO_ELECTION
 ):
+    if day_lag == 0:
+        raise ValueError("Day lag cannot be 0")
     # Print the results
     #print(f"Maximum {day_lag}-day swings:")
     all_averages = []
@@ -65,6 +67,8 @@ def average_swing_all_cycle(
 ):
     """Tries to estimate the expected average move in vote share
     for a given candidate in a given state"""
+    if ASSUMED_DAYS_TO_ELECTION == 0:
+        return 0
     assert candidate in (BIDEN, HARRIS)
     swings_df = all_swing_df()  # Will just contain BIDEN's cycles
     assert state is None or len(state) > 2, "Expected state name not code"
@@ -107,6 +111,8 @@ def all_swing_df():
 
 @functools.cache
 def find_max_swing_row(state: str = None, cycle = None) -> dict | None:
+    if ASSUMED_DAYS_TO_ELECTION == 0:
+        return None
     swings_df = all_swing_df()
     if state:
         swings_df = swings_df[swings_df['state'] == state]
@@ -340,61 +346,62 @@ def make_state_movements_plot(
     for ax in axes.flatten():
         ax.axhline(50, color='black', linewidth=1)
 
-    swings_df = calc_swing_df(df)
-    swings_df = swings_df[swings_df['has_full_days']]
-    mean_max_swing = swings_df.groupby(['cycle', 'state'])['swing_abs'].agg(['mean', 'max'])
-    # Annotate a span for the largest swing in Wisconsin
-    max_swing_row = find_max_swing_row()
-    # Add bracket for the largest swing
-    true_max_state = max_swing_row['state']
-    true_max_cycle = max_swing_row['cycle']
-
-    # Add span brackets
-    for (state, cycle), ax in state_cycle_to_ax.items():
+    if ASSUMED_DAYS_TO_ELECTION > 0:  # Distance braket
+        swings_df = calc_swing_df(df)
+        swings_df = swings_df[swings_df['has_full_days']]
+        mean_max_swing = swings_df.groupby(['cycle', 'state'])['swing_abs'].agg(['mean', 'max'])
         # Annotate a span for the largest swing in Wisconsin
-        max_swing_row = find_max_swing_row(state, cycle)
-        if max_swing_row is None:
-            continue
-        max_start_day = max_swing_row['start_day']
-        max_end_day = max_swing_row['end_day']
-        max_swing = max_swing_row['swing']
-        lowest_val = min(max_swing_row['start_value'], max_swing_row['end_value']) + 50
-        highest_val = max(max_swing_row['start_value'], max_swing_row['end_value']) + 50
-        y_min = min(ax.get_ylim())
-        y_max = max(ax.get_ylim())
-        y_range = y_max - y_min
+        max_swing_row = find_max_swing_row()
+        # Add bracket for the largest swing
+        true_max_state = max_swing_row['state']
+        true_max_cycle = max_swing_row['cycle']
 
-        # Calculate positions for the bracket
-        bracket_height = y_range * 0.05
-        bracket_bottom = lowest_val - y_range * 0.25
-        if lowest_val > y_min + y_range * 0.3:
-            bracket_vertical = bracket_bottom + bracket_height
-        else:
-            bracket_bottom = highest_val + y_range * 0.1
-            bracket_vertical = bracket_bottom - bracket_height
-        print(f"State: {state}, cycle: {cycle}, max_swing: {max_swing}")
-        if state == true_max_state and cycle == true_max_cycle:
-            color = 'red'
-            lw = 3
-            fontweight = 'bold'
-        else:
-            color = 'grey'
-            lw = 2
-            fontweight = 'normal'
+        # Add span brackets
+        for (state, cycle), ax in state_cycle_to_ax.items():
+            # Annotate a span for the largest swing in Wisconsin
+            max_swing_row = find_max_swing_row(state, cycle)
+            if max_swing_row is None:
+                continue
+            max_start_day = max_swing_row['start_day']
+            max_end_day = max_swing_row['end_day']
+            max_swing = max_swing_row['swing']
+            lowest_val = min(max_swing_row['start_value'], max_swing_row['end_value']) + 50
+            highest_val = max(max_swing_row['start_value'], max_swing_row['end_value']) + 50
+            y_min = min(ax.get_ylim())
+            y_max = max(ax.get_ylim())
+            y_range = y_max - y_min
+
+            # Calculate positions for the bracket
+            bracket_height = y_range * 0.05
+            bracket_bottom = lowest_val - y_range * 0.25
+            if lowest_val > y_min + y_range * 0.3:
+                bracket_vertical = bracket_bottom + bracket_height
+            else:
+                bracket_bottom = highest_val + y_range * 0.1
+                bracket_vertical = bracket_bottom - bracket_height
+            print(f"State: {state}, cycle: {cycle}, max_swing: {max_swing}")
+            if state == true_max_state and cycle == true_max_cycle:
+                color = 'red'
+                lw = 3
+                fontweight = 'bold'
+            else:
+                color = 'grey'
+                lw = 2
+                fontweight = 'normal'
 
 
-        # Draw the bracket
-        ax.plot([max_start_day, max_start_day], [bracket_bottom, bracket_vertical],
-                color=color, lw=lw)
-        ax.plot([max_end_day, max_end_day], [bracket_bottom, bracket_vertical],
-                color=color, lw=lw)
-        ax.plot([max_start_day, max_end_day],
-                [bracket_bottom, bracket_bottom], color=color, lw=lw)
+            # Draw the bracket
+            ax.plot([max_start_day, max_start_day], [bracket_bottom, bracket_vertical],
+                    color=color, lw=lw)
+            ax.plot([max_end_day, max_end_day], [bracket_bottom, bracket_vertical],
+                    color=color, lw=lw)
+            ax.plot([max_start_day, max_end_day],
+                    [bracket_bottom, bracket_bottom], color=color, lw=lw)
 
-        # Add text label
-        mid_point = (max_start_day + max_end_day) / 2
-        ax.text(mid_point, bracket_bottom + y_range * 0.05, f'Largest move: {max_swing:.2f}',
-                horizontalalignment='center', color=color, fontweight=fontweight)
+            # Add text label
+            mid_point = (max_start_day + max_end_day) / 2
+            ax.text(mid_point, bracket_bottom + y_range * 0.05, f'Largest move: {max_swing:.2f}',
+                    horizontalalignment='center', color=color, fontweight=fontweight)
 
     plt.tight_layout()
     if save_path:
@@ -417,6 +424,8 @@ def harris_cycle_moves(
     of movement so far. This process is pretty rough. There's probably
     a more principled way to model this, but for now this version will work.
     """
+    if ASSUMED_DAYS_TO_ELECTION == 0:
+        return 0
     df = get_margins_df_custom_avg()
     df = df[df.candidate == HARRIS]
     df = df[df.cycle == 2024]
@@ -499,6 +508,9 @@ if __name__ == "__main__":
     #    print("No walk")
     #    print(average_swing_all_cycle(BIDEN, state, use_walk_for_biden=False))
     #exit()
+    margin_df = get_margins_df_custom_avg(True)
+    make_state_movements_plot(margin_df)
+    exit()
     state = "Nevada"
     print("Average swing all cycles", average_swing_all_cycle(HARRIS, state))
     exit()
